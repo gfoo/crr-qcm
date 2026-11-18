@@ -23,8 +23,9 @@ The site is in French.
 ## Where progress is kept
 
 In the visitor's own browser (`localStorage`): nothing is sent anywhere, and each person keeps
-their own progress. On an iPhone, add the site to the home screen — otherwise Safari erases a
-site's data after seven days without a visit.
+their own progress. The home page says so at the top, in red: always use the same phone and the
+same browser — the site is designed for smartphones. On an iPhone, add the site to the home
+screen, otherwise Safari erases a site's data after seven days without a visit.
 
 ## Source
 

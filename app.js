@@ -49,8 +49,8 @@ let view = { name: "home" };
 let session = null;
 let examTick = null;
 let examToken = 0;
-// "local" until the page learns it runs in a claude.ai viewer with an account store.
-let syncState = "local";
+// A claude.ai viewer defines window.claude before any script runs; elsewhere progress stays local.
+let syncState = window.claude?.use ? "connecting" : "local";
 let remoteRef = null;
 let remoteWriting = false;
 let remoteDirty = false;
@@ -139,9 +139,11 @@ async function connectRemote() {
   if (!window.claude?.use) return;
   const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
   const userId = await user?.id();
-  if (!db || !userId) return;
+  if (!db || !userId) {
+    setSyncState("local");
+    return;
+  }
 
-  setSyncState("connecting");
   const slowTimer = setTimeout(() => setSyncState("slow"), REMOTE_SLOW_MS);
   try {
     const ref = db.doc(`data/users/${userId}/progress`);
@@ -194,14 +196,16 @@ function syncStatusLine() {
     ? "vos réponses restent gardées sur cet appareil"
     : "votre progression sera perdue en fermant la page";
   const messages = {
-    local: localStorageOk ? "" : `Le navigateur refuse l’enregistrement : ${kept}.`,
+    local: localStorageOk
+      ? "Votre progression est enregistrée sur cet appareil : utilisez toujours le même téléphone et le même navigateur. Site prévu pour smartphone."
+      : `Le navigateur refuse l’enregistrement : ${kept}.`,
     connecting: "Connexion à votre compte…",
     slow: `Votre compte ne répond pas encore : ${kept} en attendant.`,
     online: "Progression enregistrée sur votre compte Claude.",
     failed: `L’enregistrement sur votre compte a échoué : ${kept}.`,
   };
-  const alarming = !localStorageOk && syncState !== "online" && syncState !== "connecting";
-  return `<p id="sync-status" class="sync small ${alarming ? "notice" : "muted"}" ${messages[syncState] ? "" : "hidden"}>${escapeHtml(messages[syncState])}</p>`;
+  const alarming = syncState === "local" || (!localStorageOk && syncState !== "online" && syncState !== "connecting");
+  return `<p id="sync-status" class="sync small ${alarming ? "notice" : "muted"}">${escapeHtml(messages[syncState])}</p>`;
 }
 
 function card(questionId) {
@@ -445,12 +449,12 @@ function renderHome() {
   }).join("");
 
   return `
+    ${syncStatusLine()}
     <header class="hero">
       <p class="eyebrow">Certificat restreint de radiotéléphoniste</p>
       <h1>Révision CRR maritime</h1>
       <p class="muted">${escapeHtml(DATA.source)} · ${QUESTIONS.length} questions</p>
     </header>
-    ${syncStatusLine()}
     <section class="panel">
       <h2>Aujourd’hui</h2>
       <div class="stack">${todo.join("")}</div>
