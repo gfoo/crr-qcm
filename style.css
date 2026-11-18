@@ -202,8 +202,7 @@ p {
   font-size: 0.9rem;
 }
 
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
   outline: 3px solid var(--signal);
   outline-offset: 2px;
 }
@@ -265,8 +264,28 @@ input:focus-visible {
   opacity: 0.55;
 }
 
-.sync {
+.top-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   margin: 0 0 12px;
+}
+
+.top-notice p {
+  margin: 0;
+}
+
+.btn-erase {
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--wrong);
+  background: var(--wrong);
+  color: var(--surface);
+  cursor: pointer;
 }
 
 .stats {
@@ -671,25 +690,6 @@ input:focus-visible {
 
 .mistake-q {
   font-weight: 600;
-}
-
-.settings {
-  margin-top: 28px;
-}
-
-.toggle {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  cursor: pointer;
-}
-
-.toggle input {
-  flex: none;
-  margin-top: 5px;
-  width: 18px;
-  height: 18px;
 }
 
 .site-footer {

@@ -8,8 +8,6 @@ const READY_EXAMS = 3;
 const EXAMS_KEPT = 20;
 const EXAMS_SHOWN = 5;
 const EXAM_SECONDS = 22;
-const SPEECH_START_TIMEOUT_MS = 3000;
-const SPEECH_TIMEOUT_MS = 30000;
 const REMOTE_SLOW_MS = 10000;
 const MAX_BOX = 5;
 const ANCHORED_BOX = 4;
@@ -41,14 +39,12 @@ const QUESTIONS = DATA.lessons.flatMap((lesson) =>
 );
 
 const app = document.getElementById("app");
-const speechAvailable = "speechSynthesis" in window;
 
 let localStorageOk = true;
 let progress = loadLocalProgress();
 let view = { name: "home" };
 let session = null;
 let examTick = null;
-let examToken = 0;
 // A claude.ai viewer defines window.claude before any script runs; elsewhere progress stays local.
 let syncState = window.claude?.use ? "connecting" : "local";
 let remoteRef = null;
@@ -88,7 +84,7 @@ function rich(text) {
 }
 
 function emptyProgress() {
-  return { cards: {}, validated: {}, unlockAll: false, voice: false, exams: [], updatedAt: 0 };
+  return { cards: {}, validated: {}, exams: [], updatedAt: 0 };
 }
 
 function loadLocalProgress() {
@@ -188,10 +184,10 @@ async function pushRemote(isRetry = false) {
 function setSyncState(state) {
   syncState = state;
   const line = document.getElementById("sync-status");
-  if (line) line.outerHTML = syncStatusLine();
+  if (line) line.outerHTML = topNotice();
 }
 
-function syncStatusLine() {
+function topNotice() {
   const kept = localStorageOk
     ? "vos réponses restent gardées sur cet appareil"
     : "votre progression sera perdue en fermant la page";
@@ -205,7 +201,10 @@ function syncStatusLine() {
     failed: `L’enregistrement sur votre compte a échoué : ${kept}.`,
   };
   const alarming = syncState === "local" || (!localStorageOk && syncState !== "online" && syncState !== "connecting");
-  return `<p id="sync-status" class="sync small ${alarming ? "notice" : "muted"}">${escapeHtml(messages[syncState])}</p>`;
+  return `<div id="sync-status" class="top-notice ${alarming ? "notice" : ""}">
+      <p class="small ${alarming ? "" : "muted"}">${escapeHtml(messages[syncState])}</p>
+      <button class="btn-erase" data-action="reset">${view.confirmReset ? "Appuyer encore pour tout effacer" : "Tout effacer"}</button>
+    </div>`;
 }
 
 function card(questionId) {
@@ -243,7 +242,7 @@ function lessonStats(lessonId) {
 }
 
 function isUnlocked(index) {
-  return progress.unlockAll || index === 0 || Boolean(progress.validated[DATA.lessons[index - 1].id]);
+  return index === 0 || Boolean(progress.validated[DATA.lessons[index - 1].id]);
 }
 
 function nextLessonIndex() {
@@ -449,7 +448,7 @@ function renderHome() {
   }).join("");
 
   return `
-    ${syncStatusLine()}
+    ${topNotice()}
     <header class="hero">
       <p class="eyebrow">Certificat restreint de radiotéléphoniste</p>
       <h1>Révision CRR maritime</h1>
@@ -464,12 +463,6 @@ function renderHome() {
       <h2 class="section-title">Le parcours</h2>
       <p class="muted small">Chaque étape se valide quand vous savez 80 % de ses questions. La suivante se débloque alors.</p>
       <ol class="lessons">${lessons}</ol>
-    </section>
-    <section class="panel settings">
-      <h2>Réglages</h2>
-      <label class="toggle"><input type="checkbox" data-action="toggle-unlock" ${progress.unlockAll ? "checked" : ""}> Débloquer toutes les étapes</label>
-      ${speechAvailable ? `<label class="toggle"><input type="checkbox" data-action="toggle-voice" ${progress.voice ? "checked" : ""}> Lire les questions à voix haute pendant l’examen blanc, comme le jour J</label>` : ""}
-      <button class="btn btn-quiet" data-action="reset">${view.confirmReset ? "Confirmer : tout effacer" : "Effacer ma progression"}</button>
     </section>`;
 }
 
@@ -659,7 +652,7 @@ function renderExamQuestion() {
       <span class="counter">${session.index + 1} / ${session.items.length}</span>
     </nav>
     <div class="timer" aria-hidden="true"><span id="timer-fill"></span></div>
-    <p class="timer-label muted small" id="timer-label">${progress.voice && speechAvailable ? "Lecture de la question…" : `${EXAM_SECONDS} s`}</p>
+    <p class="timer-label muted small" id="timer-label">${EXAM_SECONDS} s</p>
     <section class="panel question">
       <p class="eyebrow">${partChip(item.q.part)}</p>
       <h1 class="question-text">${escapeHtml(item.q.text)}</h1>
@@ -671,36 +664,9 @@ function renderExamQuestion() {
 
 function beginExamQuestion() {
   render();
-  const token = ++examToken;
-  const startTimer = () => {
-    if (token !== examToken) return;
-    session.deadline = Date.now() + EXAM_SECONDS * 1000;
-    examTick = setInterval(updateExamTimer, 100);
-    updateExamTimer();
-  };
-  if (progress.voice && speechAvailable) speak(session.items[session.index], startTimer);
-  else startTimer();
-}
-
-function speak(item, onDone) {
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    onDone();
-  };
-  const text = `${item.q.text} ${item.choices.map((c, i) => `${LETTERS[i]} : ${c.text}.`).join(" ")}`;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "fr-FR";
-  // A phone without a French voice, or a viewer that blocks speech, may stay silent without
-  // ever firing `end`: the clock must start anyway, quickly if reading never began.
-  const startGuard = setTimeout(finish, SPEECH_START_TIMEOUT_MS);
-  utterance.onstart = () => clearTimeout(startGuard);
-  utterance.onend = finish;
-  utterance.onerror = finish;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-  setTimeout(finish, SPEECH_TIMEOUT_MS);
+  session.deadline = Date.now() + EXAM_SECONDS * 1000;
+  examTick = setInterval(updateExamTimer, 100);
+  updateExamTimer();
 }
 
 function updateExamTimer() {
@@ -715,8 +681,6 @@ function updateExamTimer() {
 function stopExam() {
   clearInterval(examTick);
   examTick = null;
-  examToken++;
-  if (speechAvailable) window.speechSynthesis.cancel();
 }
 
 function selectExamChoice(choiceIndex) {
@@ -826,7 +790,7 @@ const actions = {
       render();
       return;
     }
-    progress = { ...emptyProgress(), unlockAll: progress.unlockAll, voice: progress.voice };
+    progress = emptyProgress();
     saveProgress();
     go({ name: "home" });
   },
@@ -834,17 +798,8 @@ const actions = {
 
 app.addEventListener("click", (event) => {
   const el = event.target.closest("[data-action]");
-  if (!el || el.disabled || el.type === "checkbox") return;
+  if (!el || el.disabled) return;
   actions[el.dataset.action]?.(el);
-});
-
-app.addEventListener("change", (event) => {
-  const action = event.target.dataset.action;
-  if (action === "toggle-unlock") progress.unlockAll = event.target.checked;
-  else if (action === "toggle-voice") progress.voice = event.target.checked;
-  else return;
-  saveProgress();
-  render();
 });
 
 document.addEventListener("keydown", (event) => {

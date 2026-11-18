@@ -15,7 +15,8 @@ The site is in French.
 - **Daily review**: spaced repetition. A wrong answer comes back in the next review; a right
   one comes back after 1, 3, 7, then 15 days.
 - **Mock exam**: 24 questions drawn 6 / 8 / 10 across the three exam parts, 22 seconds each,
-  no going back, pass mark checked part by part. Optional text-to-speech reads each question.
+  no going back, pass mark checked part by part.
+- **Erase everything**: a red button at the top of the home page, tapped twice to confirm.
 - **Progress panel**: questions seen, known and anchored, level per exam part, last mock exams,
   and an "exam ready" checklist.
 - Every explanation cites the page of the official manual it comes from.
