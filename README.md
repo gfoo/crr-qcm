@@ -16,7 +16,13 @@ The site is in French.
   one comes back after 1, 3, 7, then 15 days.
 - **Mock exam**: 24 questions drawn 6 / 8 / 10 across the three exam parts, 22 seconds each,
   no going back, pass mark checked part by part.
-- **Erase everything**: a red button at the top of the home page, tapped twice to confirm.
+- **Radio cards** (bonus, outside the path): setting the VHF before speaking and a radio check,
+  then the messages to say — MAYDAY, MAYDAY RELAY, PAN PAN, SÉCURITÉ, false-alert cancellation, ship and
+  coast-station calls — in French and English, filled in with the visitor's own boat and position
+  (relative to a known point, or in coordinates), call sign spelt in the phonetic alphabet. Each
+  card says whether it is a manual example, adapted from the manual, or outside the manual.
+- **Erase everything**: a red button at the top of the home page, tapped twice to confirm; it
+  also forgets the boat entered on the radio cards.
 - **Progress panel**: questions seen, known and anchored, level per exam part, last mock exams,
   and an "exam ready" checklist.
 - Every explanation cites the page of the official manual it comes from.
@@ -43,6 +49,7 @@ This project is not affiliated with the ANFR. Official CRR page:
 | `index.html` | Page shell |
 | `app.js` | The trainer |
 | `questions.js` | Lessons and questions — in each entry, the first answer of `a` is the right one (shuffled on display) and `p` is the manual page |
+| `radio.js` | Radio cards — each line is a French / English pair, filled in with the visitor's boat |
 | `style.css` | Styles, light and dark |
 
 No build step: the files are served as they are.

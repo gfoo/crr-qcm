@@ -494,14 +494,149 @@ summary:focus-visible {
   font-weight: 600;
 }
 
-.lesson summary {
+details.panel > summary {
   cursor: pointer;
   color: var(--accent);
   font-weight: 600;
 }
 
-.lesson[open] summary {
+details.panel[open] > summary {
   margin-bottom: 14px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.fields[data-position="coordinates"] .pos-relative,
+.fields[data-position="relative"] .pos-coordinates {
+  display: none;
+}
+
+.coord {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.coord legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.steps {
+  padding-left: 20px;
+  margin: 0 0 14px;
+}
+
+.steps li {
+  margin-bottom: 6px;
+}
+
+/* 16px or more, or iOS zooms the page on focus. */
+.field input,
+.field select {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: 3px solid var(--signal);
+  outline-offset: 1px;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.pill {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pill.is-selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.pills-small .pill {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+}
+
+.radio-lines {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.radio-lines li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.radio-lines li:last-child {
+  border-bottom: 0;
+}
+
+.say {
+  display: block;
+  font-weight: 600;
+}
+
+.say-en {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.lang-fr .say-en,
+.lang-en .say-fr {
+  display: none;
+}
+
+.radio-source {
+  margin: 16px 0 0;
+  color: var(--muted);
 }
 
 .lesson .intro {
@@ -687,6 +822,21 @@ summary:focus-visible {
 .tag-wrong {
   background: var(--wrong-bg);
   color: var(--wrong);
+}
+
+.tag-manual {
+  background: var(--right-bg);
+  color: var(--right);
+}
+
+.tag-adapted {
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.tag-outside {
+  border: 1px solid currentColor;
+  color: var(--signal);
 }
 
 .mistakes {

@@ -1,6 +1,7 @@
 "use strict";
 
 const STORAGE_KEY = "crr-revision-v1";
+const BOAT_KEY = "crr-radio-boat-v1";
 const SERIES_SIZE = 12;
 const REVIEW_SIZE = 20;
 const VALIDATION_RATIO = 0.8;
@@ -18,6 +19,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const LETTERS = "ABCD";
 
 const DATA = window.CRR_DATA;
+const RADIO = window.CRR_RADIO;
 const PART_IDS = Object.keys(DATA.parts).map(Number);
 const EXAM_SIZE = PART_IDS.reduce((sum, part) => sum + DATA.parts[part].examCount, 0);
 const PERMANENT_DB_ERRORS = new Set([
@@ -42,6 +44,8 @@ const app = document.getElementById("app");
 
 let localStorageOk = true;
 let progress = loadLocalProgress();
+// The boat on the radio cards is a convenience of this device only: it never goes to the account.
+let boat = loadBoat();
 let view = { name: "home" };
 let session = null;
 let examTick = null;
@@ -100,6 +104,23 @@ function writeLocal() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     localStorageOk = true;
+  } catch {
+    localStorageOk = false;
+  }
+}
+
+function loadBoat() {
+  try {
+    return JSON.parse(localStorage.getItem(BOAT_KEY) ?? "{}");
+  } catch {
+    localStorageOk = false;
+    return {};
+  }
+}
+
+function saveBoat() {
+  try {
+    localStorage.setItem(BOAT_KEY, JSON.stringify(boat));
   } catch {
     localStorageOk = false;
   }
@@ -312,6 +333,7 @@ function render() {
     seriesEnd: renderSeriesEnd,
     exam: renderExamQuestion,
     examEnd: renderExamEnd,
+    radio: renderRadio,
   };
   app.innerHTML = screens[view.name]();
   app.querySelector("[autofocus]")?.focus();
@@ -424,6 +446,7 @@ function renderHome() {
     todo.push(`<button class="${cls}" data-action="open-lesson" data-lesson="${lesson.id}">Continuer : étape ${nextIndex + 1} — ${escapeHtml(lesson.title)}</button>`);
   }
   todo.push(`<button class="btn" data-action="exam">Examen blanc : ${EXAM_SIZE} questions, ${EXAM_SECONDS} s chacune</button>`);
+  todo.push(`<button class="btn" data-action="radio">Fiches radio : les messages VHF en français et en anglais</button>`);
 
   const lessons = DATA.lessons.map((lesson, index) => {
     const unlocked = isUnlocked(index);
@@ -754,8 +777,155 @@ function renderExamEnd() {
     ${mistakes > 0 ? `<section class="panel"><h2>Corrigé de vos erreurs</h2><ol class="mistakes">${mistakesList(session.results)}</ol></section>` : ""}`;
 }
 
+function radioContext() {
+  const value = (field) => String(boat[field] ?? "").trim() || RADIO.example[field];
+  const name = value("name").toUpperCase();
+  const callSign = value("callSign").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const persons = Number(value("persons"));
+  const distance = Number(value("distance"));
+  const place = value("place");
+  const direction = RADIO.directions[value("direction")];
+  const kind = RADIO.kinds[value("kind")];
+  const hull = RADIO.hulls[value("hull")];
+  const ofPlace = /^[aeiouyhàâéèêëîïôûü]/i.test(place) ? `d’${place}` : `de ${place}`;
+  const angle = (prefix, sides) => {
+    const degrees = Number(value(`${prefix}Deg`));
+    const minutes = Number(value(`${prefix}Min`));
+    const side = sides[value(`${prefix}Side`)];
+    const paddedMinutes = String(minutes).padStart(2, "0");
+    return {
+      fr: `${degrees} ${degrees >= 2 ? "degrés" : "degré"} ${paddedMinutes} ${minutes >= 2 ? "minutes" : "minute"} ${side.fr}`,
+      en: `${degrees} ${degrees === 1 ? "degree" : "degrees"} ${paddedMinutes} ${minutes === 1 ? "minute" : "minutes"} ${side.en}`,
+    };
+  };
+  const latitude = angle("lat", RADIO.latitudeSides);
+  const longitude = angle("lon", RADIO.longitudeSides);
+  const spell = (language) => [...callSign].map((char) => RADIO.phonetic[char] ?? RADIO.digits[language][char]).join(", ");
+  const now = new Date();
+  const utcTime = (separator) => [now.getUTCHours(), now.getUTCMinutes()].map((n) => String(n).padStart(2, "0")).join(separator);
+  const utcDay = (locale) => now.toLocaleDateString(locale, { day: "numeric", month: "long", timeZone: "UTC" });
+  return {
+    name,
+    name3: [name, name, name].join(", "),
+    callSign,
+    spelled: { fr: spell("fr"), en: spell("en") },
+    mmsi: [...value("mmsi").replace(/\D/g, "")].join(" "),
+    kind,
+    description: { fr: `${kind.fr[0].toUpperCase()}${kind.fr.slice(1)} coque ${hull.fr}`, en: `${hull.en} hull ${kind.en}` },
+    position: value("positionMode") === "coordinates"
+      ? { fr: `${latitude.fr}, ${longitude.fr}`, en: `${latitude.en}, ${longitude.en}` }
+      : {
+          fr: `${distance.toLocaleString("fr-FR")} ${distance >= 2 ? "milles" : "mille"} ${direction.fr} ${ofPlace}`,
+          en: `${distance} ${distance === 1 ? "mile" : "miles"} ${direction.en} of ${place}`,
+        },
+    persons: {
+      fr: `${persons} ${persons >= 2 ? "personnes" : "personne"} à bord`,
+      en: `${persons} ${persons === 1 ? "person" : "persons"} on board`,
+    },
+    staying: {
+      fr: `${persons} ${persons >= 2 ? "personnes resteront" : "personne restera"} à bord`,
+      en: `${persons} ${persons === 1 ? "person" : "persons"} will stay on board`,
+    },
+    utc: { fr: `${utcDay("fr-FR")}, ${utcTime(" h ")} UTC`, en: `${utcDay("en-GB")}, ${utcTime(":")} UTC` },
+    place,
+    ofPlace,
+  };
+}
+
+function pills(action, items, selected) {
+  return items.map(([value, label]) => `<button class="pill${value === selected ? " is-selected" : ""}" data-action="${action}" data-value="${value}" aria-pressed="${value === selected}">${escapeHtml(label)}</button>`).join("");
+}
+
+function radioLine([fr, en = fr]) {
+  if (fr === en) return `<li><span class="say">${escapeHtml(fr)}</span></li>`;
+  return `<li><span class="say say-fr">${escapeHtml(fr)}</span><span class="say say-en" lang="en">${escapeHtml(en)}</span></li>`;
+}
+
+function radioArea() {
+  const radioCard = RADIO.cards.find((c) => c.id === view.card);
+  const situation = radioCard.situations?.[view.situation];
+  const { origin, source } = situation ?? radioCard;
+  const blocks = radioCard.blocks(radioContext(), situation).map((block) => `
+      <h3>${escapeHtml(block.label)}</h3>
+      <ul class="radio-lines">${block.lines.map(radioLine).join("")}</ul>`).join("");
+  const situations = radioCard.situations
+    ? `<div class="pills">${pills("radio-situation", radioCard.situations.map((s, i) => [String(i), s.label]), String(view.situation))}</div>`
+    : "";
+
+  return `
+    <nav class="pills" aria-label="Fiches">${pills("radio-card", RADIO.cards.map((c) => [c.id, c.label]), radioCard.id)}</nav>
+    <section class="panel radio-card lang-${view.lang}">
+      <p class="eyebrow">${escapeHtml(radioCard.channel)}</p>
+      <h2>${escapeHtml(radioCard.title)}</h2>
+      <p class="muted small">${escapeHtml(radioCard.when)}</p>
+      ${radioCard.steps ? `<ol class="steps">${radioCard.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>` : ""}
+      ${situations}
+      <div class="pills pills-small" role="group" aria-label="Langue affichée">${pills("radio-lang", [["both", "Français et anglais"], ["fr", "Français"], ["en", "Anglais"]], view.lang)}</div>
+      ${blocks}
+      <p class="radio-source small"><span class="tag tag-${origin}">${RADIO.origins[origin]}</span> ${escapeHtml(source)}</p>
+    </section>`;
+}
+
+// Re-rendering only the cards keeps the boat fields, and the field being typed in, untouched.
+function renderRadioArea(action) {
+  document.getElementById("radio-area").innerHTML = radioArea();
+  if (action) app.querySelector(`[data-action="${action}"].is-selected`)?.focus();
+}
+
+function renderRadio() {
+  const field = (key, label, attributes = "", className = "") => `<label class="field ${className}"><span>${label}</span>
+      <input data-boat="${key}" value="${escapeHtml(boat[key] ?? "")}" placeholder="${escapeHtml(RADIO.example[key])}" autocomplete="off" ${attributes}></label>`;
+  const select = (key, label, options, className = "") => `<label class="field ${className}"><span>${label}</span>
+      <select data-boat="${key}">${Object.entries(options).map(([value, option]) =>
+        `<option value="${value}" ${value === (boat[key] ?? RADIO.example[key]) ? "selected" : ""}>${escapeHtml(option.label ?? option.fr)}</option>`).join("")}</select></label>`;
+  const coordinate = (prefix, legend, sideLabel, sides) => `<fieldset class="coord pos-coordinates"><legend>${legend}</legend>
+      ${field(`${prefix}Deg`, "Degrés", 'type="number" min="0" max="180"')}
+      ${field(`${prefix}Min`, "Minutes", 'type="number" min="0" max="59"')}
+      ${select(`${prefix}Side`, sideLabel, sides)}
+    </fieldset>`;
+
+  return `
+    <nav class="topbar"><button class="link" data-action="home">← Parcours</button></nav>
+    <header class="panel">
+      <p class="eyebrow">Bonus · hors parcours</p>
+      <h1>Fiches radio FR/EN</h1>
+      <p class="muted">Les messages à dire à la VHF, en français et en anglais, avec votre bateau. Un champ vide prend l’exemple du manuel ; ce que vous saisissez reste sur cet appareil.</p>
+    </header>
+    <details class="panel radio-boat" ${Object.keys(boat).length ? "" : "open"}>
+      <summary>Mon bateau et ma position</summary>
+      <div class="fields" data-position="${boat.positionMode ?? RADIO.example.positionMode}">
+        ${field("name", "Nom du bateau", 'autocapitalize="characters"')}
+        ${field("callSign", "Indicatif", 'autocapitalize="characters" maxlength="10"')}
+        ${field("mmsi", "MMSI", 'inputmode="numeric" maxlength="11"')}
+        ${field("persons", "Personnes à bord", 'type="number" min="1" max="99"')}
+        ${select("kind", "Type", RADIO.kinds)}
+        ${select("hull", "Coque", RADIO.hulls)}
+        ${select("positionMode", "Position", RADIO.positionModes, "field-wide")}
+        ${field("distance", "Distance (milles)", 'type="number" min="0" step="0.5"', "pos-relative")}
+        ${select("direction", "Direction", RADIO.directions, "pos-relative")}
+        ${field("place", "Point connu", "", "field-wide pos-relative")}
+        ${coordinate("lat", "Latitude", "N / S", RADIO.latitudeSides)}
+        ${coordinate("lon", "Longitude", "E / O", RADIO.longitudeSides)}
+      </div>
+    </details>
+    <div id="radio-area">${radioArea()}</div>`;
+}
+
 const actions = {
   home: () => go({ name: "home" }),
+  radio: () => go({ name: "radio", card: RADIO.cards[0].id, situation: 0, lang: "both" }),
+  "radio-card": (el) => {
+    view = { ...view, card: el.dataset.value, situation: 0 };
+    renderRadioArea("radio-card");
+  },
+  "radio-situation": (el) => {
+    view.situation = Number(el.dataset.value);
+    renderRadioArea("radio-situation");
+  },
+  "radio-lang": (el) => {
+    view.lang = el.dataset.value;
+    renderRadioArea("radio-lang");
+  },
   quit: () => go({ name: "home" }),
   "open-lesson": (el) => go({ name: "lesson", lessonId: el.dataset.lesson }),
   "start-lesson": (el) => {
@@ -793,9 +963,20 @@ const actions = {
     }
     progress = emptyProgress();
     saveProgress();
+    boat = {};
+    saveBoat();
     go({ name: "home" });
   },
 };
+
+app.addEventListener("input", (event) => {
+  const field = event.target.dataset.boat;
+  if (!field) return;
+  boat[field] = event.target.value;
+  if (field === "positionMode") event.target.closest(".fields").dataset.position = event.target.value;
+  saveBoat();
+  renderRadioArea();
+});
 
 app.addEventListener("click", (event) => {
   const el = event.target.closest("[data-action]");
