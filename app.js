@@ -476,20 +476,21 @@ function renderLesson() {
 
   return `
     <nav class="topbar"><button class="link" data-action="home">← Parcours</button></nav>
-    <article class="panel lesson">
+    <section class="panel">
       <p class="eyebrow">Étape ${index + 1} · ${partChip(lesson.part)} · manuel ${escapeHtml(lesson.pages)}</p>
       <h1>${escapeHtml(lesson.title)}</h1>
-      <p class="intro">${rich(lesson.intro)}</p>
-      <h2>À retenir</h2>
-      <ul class="key-points">${lesson.keyPoints.map((point) => `<li>${rich(point)}</li>`).join("")}</ul>
-      <aside class="tip"><strong>Astuce</strong> ${rich(lesson.tip)}</aside>
-    </article>
-    <section class="panel">
       <div class="part-head"><span>${validated ? "Étape validée" : "Votre avancement"}</span><strong>${stats.known} / ${stats.total} sues</strong></div>
       ${progressBar(stats.known / stats.total, lesson.title)}
       <p class="muted small">Une série compte ${Math.min(SERIES_SIZE, stats.total)} questions, en commençant par celles que vous n’avez jamais vues ou que vous avez ratées.</p>
       <button class="btn btn-primary" data-action="start-lesson" data-lesson="${lesson.id}" autofocus>${cta}</button>
-    </section>`;
+    </section>
+    <details class="panel lesson">
+      <summary>Fiche de l’étape — résumé et astuce</summary>
+      <p class="intro">${rich(lesson.intro)}</p>
+      <h2>À retenir</h2>
+      <ul class="key-points">${lesson.keyPoints.map((point) => `<li>${rich(point)}</li>`).join("")}</ul>
+      <aside class="tip"><strong>Astuce</strong> ${rich(lesson.tip)}</aside>
+    </details>`;
 }
 
 function sessionTitle() {

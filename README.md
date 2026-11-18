@@ -9,9 +9,9 @@ The site is in French.
 ## What it does
 
 - **Path**: 15 lessons, from the most practical (channels, priorities, MAYDAY) to the most
-  theoretical (GMDSS zones, waves, beacons). Each opens with a summary sheet and a memory tip,
-  then series of 12 questions. A lesson is validated once 80 % of its questions are known,
-  which unlocks the next one.
+  theoretical (GMDSS zones, waves, beacons). Each is worked through in series of 12 questions;
+  its summary sheet and memory tip stay folded on the lesson page until the visitor opens them.
+  A lesson is validated once 80 % of its questions are known, which unlocks the next one.
 - **Daily review**: spaced repetition. A wrong answer comes back in the next review; a right
   one comes back after 1, 3, 7, then 15 days.
 - **Mock exam**: 24 questions drawn 6 / 8 / 10 across the three exam parts, 22 seconds each,

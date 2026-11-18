@@ -202,7 +202,8 @@ p {
   font-size: 0.9rem;
 }
 
-button:focus-visible {
+button:focus-visible,
+summary:focus-visible {
   outline: 3px solid var(--signal);
   outline-offset: 2px;
 }
@@ -491,6 +492,16 @@ button:focus-visible {
 .status-done {
   color: var(--right);
   font-weight: 600;
+}
+
+.lesson summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lesson[open] summary {
+  margin-bottom: 14px;
 }
 
 .lesson .intro {
